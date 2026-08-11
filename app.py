@@ -52,9 +52,11 @@ header[data-testid="stHeader"] {
     backdrop-filter: blur(12px);
 }
 
-.block-container {
+/* Keep page content clear of Streamlit's top toolbar */
+.block-container,
+[data-testid="stMainBlockContainer"] {
     max-width: 1280px;
-    padding-top: 1.15rem;
+    padding-top: 4.5rem !important;
     padding-bottom: 4rem;
 }
 
@@ -593,10 +595,11 @@ li[role="option"][aria-selected="true"], div[role="option"][aria-selected="true"
 }
 
 @media (max-width:1024px) {
-    .block-container {
+    .block-container,
+    [data-testid="stMainBlockContainer"] {
         padding-left:1rem;
         padding-right:1rem;
-        padding-top:.8rem;
+        padding-top:4.25rem !important;
     }
     .desktop-view { display:none !important; }
     .mobile-view { display:block !important; }
@@ -617,7 +620,12 @@ li[role="option"][aria-selected="true"], div[role="option"][aria-selected="true"
 }
 
 @media (max-width:430px) {
-    .block-container { padding-left:.75rem; padding-right:.75rem; }
+    .block-container,
+    [data-testid="stMainBlockContainer"] {
+        padding-left:.75rem;
+        padding-right:.75rem;
+        padding-top:4rem !important;
+    }
     .shego-logo { width:42px; height:42px; border-radius:13px; }
     .shego-name { font-size:1.35rem; }
     .stats-grid { grid-template-columns:1fr; }
@@ -802,23 +810,36 @@ def display_fare(value):
 
 
 def display_date(value):
+    """Display dates consistently as DD-MM-YYYY without changing Sheet values."""
     text = clean_text(value, "-")
-    match = re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T].*)?", text)
-
-    if not match:
+    if text == "-":
         return text
 
-    year, month, day = match.groups()
+    # Google Sheets/CSV can return dates in several common formats.
+    # Malaysia-style day-first formats are preferred for ambiguous numeric dates.
+    date_part = re.split(r"[ T]", text, maxsplit=1)[0].strip()
+
+    formats = (
+        "%Y-%m-%d",
+        "%Y/%m/%d",
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+        "%d.%m.%Y",
+    )
+
+    for fmt in formats:
+        try:
+            parsed = pd.to_datetime(date_part, format=fmt, errors="raise")
+            return parsed.strftime("%d-%m-%Y")
+        except (ValueError, TypeError):
+            pass
+
+    # Last fallback for values such as 8/11/2026.
     try:
-        timestamp = pd.Timestamp(
-            year=int(year),
-            month=int(month),
-            day=int(day),
-        )
-    except ValueError:
+        parsed = pd.to_datetime(date_part, dayfirst=True, errors="raise")
+        return parsed.strftime("%d-%m-%Y")
+    except (ValueError, TypeError):
         return text
-
-    return timestamp.strftime("%d/%m/%Y")
 
 
 def display_time(value):
@@ -991,6 +1012,7 @@ def live_board():
                     "Tarikh",
                     options=date_options,
                     placeholder="Semua tarikh",
+                    format_func=display_date,
                     key="filter_dates",
                 )
                 if date_options else []
