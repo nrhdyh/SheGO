@@ -321,21 +321,7 @@ st.markdown(
         color-scheme:light !important;
     }
 
-    /* Sort radio */
-    [data-testid="stRadio"] label {
-        background:#ffffff !important;
-        color:#303030 !important;
-        border:1px solid #e3e3e3 !important;
-        border-radius:999px !important;
-        padding:7px 10px !important;
-        margin-right:5px !important;
-    }
-
-    [data-testid="stRadio"] label:has(input:checked) {
-        background:#fff3f7 !important;
-        border-color:#efb9cb !important;
-        color:#b93e68 !important;
-    }
+    /* Sorting now uses a selectbox for cleaner cross-version rendering. */
 
     /* ---------- FILTER BOX ---------- */
     div[data-testid="stVerticalBlockBorderWrapper"] {
@@ -682,6 +668,119 @@ st.markdown(
             grid-template-columns:1fr;
         }
     }
+
+
+    /* ==========================================================
+       STREAMLIT / BASEWEB LIGHT THEME HARD OVERRIDE
+       Fixes dark select/multiselect controls on newer Streamlit.
+       ========================================================== */
+    [data-testid="stTextInput"] input,
+    [data-testid="stTextInput"] [data-baseweb="input"],
+    [data-testid="stTextInput"] [data-baseweb="base-input"],
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div,
+    [data-testid="stMultiSelect"] [data-baseweb="select"] > div,
+    [data-testid="stSelectbox"] [role="combobox"],
+    [data-testid="stMultiSelect"] [role="combobox"] {
+        background:#ffffff !important;
+        background-color:#ffffff !important;
+        color:#171717 !important;
+        -webkit-text-fill-color:#171717 !important;
+        border-color:#dedede !important;
+        box-shadow:none !important;
+        color-scheme:light !important;
+    }
+
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div > div,
+    [data-testid="stMultiSelect"] [data-baseweb="select"] > div > div {
+        background-color:#ffffff !important;
+        color:#171717 !important;
+    }
+
+    [data-testid="stSelectbox"] [data-baseweb="select"] span,
+    [data-testid="stSelectbox"] [data-baseweb="select"] input,
+    [data-testid="stSelectbox"] [role="combobox"] *,
+    [data-testid="stMultiSelect"] [data-baseweb="select"] span,
+    [data-testid="stMultiSelect"] [data-baseweb="select"] input,
+    [data-testid="stMultiSelect"] [role="combobox"] * {
+        color:#171717 !important;
+        -webkit-text-fill-color:#171717 !important;
+    }
+
+    [data-testid="stSelectbox"] [data-baseweb="select"] svg,
+    [data-testid="stMultiSelect"] [data-baseweb="select"] svg {
+        fill:#6d6d6d !important;
+        color:#6d6d6d !important;
+    }
+
+    /* Multiselect tags must stay pink after broad white override. */
+    [data-testid="stMultiSelect"] [data-baseweb="tag"],
+    [data-testid="stMultiSelect"] [data-baseweb="tag"] > div,
+    [data-testid="stMultiSelect"] [data-baseweb="tag"] span {
+        background:#fff0f5 !important;
+        color:#bd426d !important;
+        -webkit-text-fill-color:#bd426d !important;
+    }
+
+    [data-testid="stMultiSelect"] [data-baseweb="tag"] {
+        border:1px solid #f3c4d4 !important;
+    }
+
+    [data-testid="stMultiSelect"] [data-baseweb="tag"] svg {
+        fill:#bd426d !important;
+        color:#bd426d !important;
+    }
+
+    /* Dropdown popup rendered in Streamlit portal. */
+    body > div[data-baseweb="popover"],
+    body > div[data-baseweb="popover"] > div,
+    [data-baseweb="popover"] [data-baseweb="menu"],
+    [data-baseweb="menu"],
+    ul[role="listbox"] {
+        background:#ffffff !important;
+        background-color:#ffffff !important;
+        color:#171717 !important;
+        color-scheme:light !important;
+    }
+
+    [role="option"] {
+        background:#ffffff !important;
+        color:#171717 !important;
+        -webkit-text-fill-color:#171717 !important;
+    }
+
+    [role="option"]:hover,
+    [role="option"][aria-selected="true"] {
+        background:#fff1f6 !important;
+        color:#bd426d !important;
+        -webkit-text-fill-color:#bd426d !important;
+    }
+
+    /* Cleaner filter controls. */
+    [data-testid="stTextInput"] input,
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div,
+    [data-testid="stMultiSelect"] [data-baseweb="select"] > div {
+        min-height:48px !important;
+        border-radius:12px !important;
+    }
+
+    [data-testid="stSlider"] [role="slider"] {
+        background:#e85c8a !important;
+        border-color:#e85c8a !important;
+    }
+
+    [data-testid="stSlider"] [data-testid="stTickBarMin"],
+    [data-testid="stSlider"] [data-testid="stTickBarMax"] {
+        color:#666 !important;
+    }
+
+    /* Button treatment: reset is subtle, refresh remains neutral. */
+    .stButton > button:focus,
+    .stButton > button:focus-visible {
+        outline:none !important;
+        box-shadow:0 0 0 3px rgba(232,92,138,.12) !important;
+        border-color:#e85c8a !important;
+    }
+
     </style>
     """,
     unsafe_allow_html=True,
@@ -1278,14 +1377,13 @@ with st.container(border=True):
             fare_max_filter = float(selected_range[1])
             fare_filter_active = selected_range != (min_fare, max_fare)
 
-    sort_option = st.radio(
+    sort_option = st.selectbox(
         "Susun Job",
         options=[
             "Asal dari Google Sheet",
             "Tambang tertinggi",
             "Tambang terendah",
         ],
-        horizontal=True,
         key="sort_option",
     )
 
