@@ -399,7 +399,7 @@ st.markdown(
 
     .job-table {
         width:100%;
-        min-width:1080px;
+        min-width:1320px;
         border-collapse:collapse;
         color:#171717;
         background:#fff;
@@ -474,6 +474,21 @@ st.markdown(
     .claim-btn:hover {
         background:#cd4774;
         transform:translateY(-1px);
+    }
+
+    .note-cell {
+        min-width:190px;
+        max-width:280px;
+        color:#666 !important;
+        white-space:normal;
+        line-height:1.45;
+    }
+
+    .claim-help {
+        margin-top:7px;
+        color:#888;
+        font-size:.73rem;
+        line-height:1.45;
     }
 
     /* ---------- MOBILE CARDS ---------- */
@@ -676,6 +691,10 @@ st.markdown(
 # ============================================================
 # GOOGLE SHEET
 # ============================================================
+SHEET_CACHE_TTL = 15
+ALLOWED_STATUSES = {"open", "assigned", "completed", "cancelled"}
+
+
 def sheet_csv_url():
     return (
         f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq"
@@ -683,10 +702,19 @@ def sheet_csv_url():
     )
 
 
-@st.cache_data(ttl=20, show_spinner=False)
+@st.cache_data(ttl=SHEET_CACHE_TTL, show_spinner=False)
 def load_jobs():
+    """
+    Read the Driver Board as strings so values such as Booking ID
+    do not lose leading zeroes.
+    """
     try:
-        df = pd.read_csv(sheet_csv_url())
+        df = pd.read_csv(
+            sheet_csv_url(),
+            dtype=str,
+            keep_default_na=False,
+            skip_blank_lines=False,
+        )
     except Exception as exc:
         raise RuntimeError(
             f"Tak dapat baca tab '{SHEET_TAB}'. "
@@ -694,7 +722,22 @@ def load_jobs():
         ) from exc
 
     df.columns = [str(col).strip() for col in df.columns]
-    return df.dropna(how="all").copy()
+    data_columns = list(df.columns)
+
+    # Keep the original Google Sheet row number as an internal stable fallback.
+    # Header is assumed to be row 1, therefore first data row is row 2.
+    df["_source_row"] = range(2, len(df) + 2)
+
+    if data_columns:
+        non_empty_mask = (
+            df[data_columns]
+            .astype(str)
+            .apply(lambda col: col.str.strip().ne(""))
+            .any(axis=1)
+        )
+        df = df.loc[non_empty_mask].copy()
+
+    return df
 
 
 # ============================================================
@@ -737,7 +780,7 @@ COLUMN_ALIASES = {
     ],
     "notes": [
         "Nota", "Nota Tambahan", "Catatan",
-        "Remarks", "Additional Notes"
+        "Remarks", "Remark", "Additional Notes"
     ],
     "fare": [
         "Tambang (RM)", "Tambang", "Harga",
@@ -757,13 +800,16 @@ def find_column(df, key):
     normalized = {
         normalize_header(col): col
         for col in df.columns
+        if not str(col).startswith("_")
     }
 
+    # Prefer exact match first.
     for alias in COLUMN_ALIASES[key]:
         alias_n = normalize_header(alias)
         if alias_n in normalized:
             return normalized[alias_n]
 
+    # Fuzzy match only for longer aliases to avoid unsafe match such as "ID".
     for alias in COLUMN_ALIASES[key]:
         alias_n = normalize_header(alias)
 
@@ -809,7 +855,7 @@ def unique_values(df, column):
 
     values = (
         df[column]
-        .dropna()
+        .fillna("")
         .astype(str)
         .str.strip()
     )
@@ -830,13 +876,16 @@ def fare_to_number(value):
     if pd.isna(value):
         return None
 
-    cleaned = re.sub(
-        r"[^0-9.]",
-        "",
-        str(value).strip()
-    )
+    text = str(value).strip()
 
-    if not cleaned:
+    if not text:
+        return None
+
+    # Malaysia fare format is normally 1,234.56.
+    cleaned = text.replace(",", "")
+    cleaned = re.sub(r"[^0-9.\-]", "", cleaned)
+
+    if cleaned in {"", "-", ".", "-."}:
         return None
 
     try:
@@ -854,6 +903,77 @@ def display_fare(value):
     return f"RM {number:,.2f}"
 
 
+def display_date(value):
+    """
+    Only normalize clearly unambiguous ISO dates.
+    Other date formats are preserved exactly as supplied by Google Sheet.
+    """
+    text = clean_text(value, "-")
+
+    match = re.fullmatch(
+        r"(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T].*)?",
+        text,
+    )
+
+    if not match:
+        return text
+
+    year, month, day = match.groups()
+
+    try:
+        timestamp = pd.Timestamp(
+            year=int(year),
+            month=int(month),
+            day=int(day),
+        )
+    except ValueError:
+        return text
+
+    return timestamp.strftime("%d/%m/%Y")
+
+
+def display_time(value):
+    text = clean_text(value, "-")
+
+    # 08:30:00 -> 08:30
+    match_24h = re.fullmatch(r"(\d{1,2}):(\d{2}):00", text)
+    if match_24h:
+        return f"{int(match_24h.group(1)):02d}:{match_24h.group(2)}"
+
+    # Keep all other formats as supplied.
+    return text
+
+
+def fallback_booking_id(source_row):
+    try:
+        row_number = int(source_row)
+    except (TypeError, ValueError):
+        row_number = 0
+
+    return f"SG-R{row_number:04d}" if row_number else "SG-TEMP"
+
+
+def make_booking_display(row, booking_column):
+    booking_id = get_value(row, booking_column, "")
+
+    if booking_id:
+        return booking_id
+
+    return fallback_booking_id(row.get("_source_row"))
+
+
+def reset_filters():
+    for key in (
+        "search_location",
+        "filter_dates",
+        "filter_trip_types",
+        "filter_pax",
+        "fare_range",
+        "sort_option",
+    ):
+        st.session_state.pop(key, None)
+
+
 # ============================================================
 # BRAND + HERO
 # ============================================================
@@ -869,7 +989,7 @@ st.markdown(
         </div>
         <div class="live-pill">
             <span class="live-dot"></span>
-            Live dari Google Sheet
+            Google Sheet Sync
         </div>
     </div>
     """,
@@ -882,10 +1002,10 @@ st.markdown(
         <span class="hero-badge">🚗 JOB UNTUK PEMANDU SHEGO</span>
         <h1>Cari trip yang sesuai dengan masa dan kawasan anda.</h1>
         <p>
-            Hanya tempahan berstatus <b>Open</b> dipaparkan di sini.
-            Bila admin tukar status kepada <b>Assigned</b>, <b>Completed</b>
-            atau <b>Cancelled</b>, job tersebut akan hilang daripada board
-            selepas data dikemas kini.
+            Hanya tempahan berstatus <b>Open</b> dipaparkan.
+            Permintaan claim melalui WhatsApp <b>belum dianggap confirmed</b>
+            sehingga admin mengesahkan pemandu dan menukar status job kepada
+            <b>Assigned</b>.
         </p>
     </section>
     """,
@@ -924,9 +1044,48 @@ if not cols["pickup"] or not cols["destination"]:
     )
 
     with st.expander("Column yang berjaya dibaca"):
-        st.write(list(jobs.columns))
+        st.write([
+            col for col in jobs.columns
+            if not str(col).startswith("_")
+        ])
 
     st.stop()
+
+# Build a stable display/claim ID before filtering and sorting.
+jobs["_booking_display"] = jobs.apply(
+    lambda row: make_booking_display(row, cols["booking_id"]),
+    axis=1,
+)
+
+# Data-quality checks.
+if not cols["booking_id"]:
+    st.warning(
+        "Column **Booking ID** tidak dijumpai. "
+        "Sistem sedang guna ID sementara berdasarkan nombor baris Google Sheet "
+        "(contoh: SG-R0002). Untuk production, sangat disarankan sediakan "
+        "Booking ID yang unik dan kekal."
+    )
+else:
+    explicit_ids = (
+        jobs[cols["booking_id"]]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+    )
+    duplicate_mask = explicit_ids.ne("") & explicit_ids.duplicated(keep=False)
+
+    if duplicate_mask.any():
+        duplicated_values = sorted(
+            explicit_ids[duplicate_mask].unique().tolist()
+        )
+        preview = ", ".join(duplicated_values[:5])
+        more = "..." if len(duplicated_values) > 5 else ""
+
+        st.warning(
+            "Ada **Booking ID duplicate** dalam Google Sheet: "
+            f"{preview}{more}. Sila jadikan setiap Booking ID unik "
+            "supaya claim driver tidak tersalah job."
+        )
 
 
 # ============================================================
@@ -941,6 +1100,16 @@ normalized_status = (
     .str.strip()
     .str.casefold()
 )
+
+unknown_statuses = sorted(
+    set(normalized_status.unique()) - ALLOWED_STATUSES - {""}
+)
+
+if unknown_statuses:
+    st.warning(
+        "Ada status yang tidak ikut dropdown standard dan tidak akan dipaparkan: "
+        + ", ".join(unknown_statuses[:8])
+    )
 
 open_jobs = jobs[
     normalized_status.eq(VISIBLE_STATUS)
@@ -988,7 +1157,8 @@ if open_jobs.empty:
         """
         <div class="empty-box">
             <b>Tiada job Open buat masa ini.</b><br>
-            Job baru akan muncul apabila admin menetapkan status kepada Open.
+            Job baru akan muncul apabila admin menetapkan status kepada Open
+            dan halaman dimuat semula.
         </div>
         """,
         unsafe_allow_html=True,
@@ -1003,11 +1173,16 @@ st.markdown(
     """
     <div class="section-title">Cari Job</div>
     <div class="section-sub">
-        Gunakan filter di bawah. Hanya filter yang mempunyai data akan dipaparkan.
+        Cari menggunakan lokasi atau Booking ID, kemudian tapis ikut tarikh,
+        jenis trip, penumpang dan tambang.
     </div>
     """,
     unsafe_allow_html=True,
 )
+
+fare_min_filter = None
+fare_max_filter = None
+fare_filter_active = False
 
 with st.container(border=True):
 
@@ -1015,8 +1190,9 @@ with st.container(border=True):
 
     with c1:
         location_search = st.text_input(
-            "Pickup / Destinasi",
-            placeholder="Contoh: Ulu Tiram, Kota Tinggi, Senai...",
+            "Pickup / Destinasi / Booking ID",
+            placeholder="Contoh: Ulu Tiram, Senai, SG-001...",
+            key="search_location",
         ).strip().casefold()
 
     with c2:
@@ -1030,6 +1206,7 @@ with st.container(border=True):
                 "Tarikh",
                 options=date_options,
                 placeholder="Semua tarikh",
+                key="filter_dates",
             )
             if date_options
             else []
@@ -1048,6 +1225,7 @@ with st.container(border=True):
                 "Jenis Trip",
                 options=trip_options,
                 placeholder="Semua jenis trip",
+                key="filter_trip_types",
             )
             if trip_options
             else []
@@ -1064,12 +1242,12 @@ with st.container(border=True):
                 "Penumpang",
                 options=pax_options,
                 placeholder="Semua",
+                key="filter_pax",
             )
             if pax_options
             else []
         )
 
-    # Fare slider
     fare_numbers = []
 
     if cols["fare"]:
@@ -1081,27 +1259,24 @@ with st.container(border=True):
             if n is not None
         ]
 
-    fare_min_filter = None
-    fare_max_filter = None
-
     if fare_numbers:
         min_fare = int(min(fare_numbers))
         max_fare = int(max(fare_numbers))
 
         if min_fare == max_fare:
-            st.caption(f"Tambang semasa: RM{min_fare}")
-            fare_min_filter = float(min_fare)
-            fare_max_filter = float(max_fare)
+            st.caption(f"Tambang semasa: RM {min_fare:,}")
         else:
             selected_range = st.slider(
                 "Julat Tambang (RM)",
                 min_value=min_fare,
                 max_value=max_fare,
                 value=(min_fare, max_fare),
+                key="fare_range",
             )
 
             fare_min_filter = float(selected_range[0])
             fare_max_filter = float(selected_range[1])
+            fare_filter_active = selected_range != (min_fare, max_fare)
 
     sort_option = st.radio(
         "Susun Job",
@@ -1111,14 +1286,25 @@ with st.container(border=True):
             "Tambang terendah",
         ],
         horizontal=True,
+        key="sort_option",
     )
 
-    if st.button(
-        "↻ Refresh Data",
-        use_container_width=True,
-    ):
-        load_jobs.clear()
-        st.rerun()
+    refresh_col, reset_col = st.columns(2)
+
+    with refresh_col:
+        if st.button(
+            "↻ Refresh Data",
+            use_container_width=True,
+        ):
+            load_jobs.clear()
+            st.rerun()
+
+    with reset_col:
+        st.button(
+            "✕ Reset Filter",
+            use_container_width=True,
+            on_click=reset_filters,
+        )
 
 
 # ============================================================
@@ -1142,6 +1328,13 @@ if location_search:
         .str.casefold()
     )
 
+    booking_series = (
+        filtered["_booking_display"]
+        .fillna("")
+        .astype(str)
+        .str.casefold()
+    )
+
     filtered = filtered[
         pickup_series.str.contains(
             location_search,
@@ -1150,6 +1343,12 @@ if location_search:
         )
         |
         destination_series.str.contains(
+            location_search,
+            regex=False,
+            na=False,
+        )
+        |
+        booking_series.str.contains(
             location_search,
             regex=False,
             na=False,
@@ -1184,8 +1383,11 @@ if selected_pax and cols["pax"]:
     ]
 
 
+# Only apply fare range when user actually narrows the slider.
+# This prevents "Semak admin" rows from disappearing with the default range.
 if (
-    cols["fare"]
+    fare_filter_active
+    and cols["fare"]
     and fare_min_filter is not None
     and fare_max_filter is not None
 ):
@@ -1194,8 +1396,6 @@ if (
     ].apply(fare_to_number)
 
     filtered = filtered[
-        fare_series.isna()
-        |
         fare_series.between(
             fare_min_filter,
             fare_max_filter,
@@ -1215,7 +1415,14 @@ if cols["fare"] and sort_option != "Asal dari Google Sheet":
         "_fare_num",
         ascending=(sort_option == "Tambang terendah"),
         na_position="last",
+        kind="stable",
     ).drop(columns=["_fare_num"])
+else:
+    filtered = filtered.sort_values(
+        "_source_row",
+        ascending=True,
+        kind="stable",
+    )
 
 
 # ============================================================
@@ -1228,7 +1435,7 @@ st.markdown(
             🚗 {len(filtered)} job sepadan
         </div>
         <div class="result-note">
-            Status selain Open tidak dipaparkan.
+            Claim melalui WhatsApp tertakluk kepada pengesahan admin.
         </div>
     </div>
     """,
@@ -1254,18 +1461,11 @@ desktop_rows = []
 mobile_cards = []
 
 
-for position, (_, row) in enumerate(
-    filtered.iterrows(),
-    start=1,
-):
-    booking_id = get_value(
-        row,
-        cols["booking_id"],
-        "",
+for _, row in filtered.iterrows():
+    booking_id = clean_text(
+        row.get("_booking_display", ""),
+        fallback_booking_id(row.get("_source_row")),
     )
-
-    if not booking_id:
-        booking_id = f"SG-{position:05d}"
 
     pickup = get_value(
         row,
@@ -1279,17 +1479,19 @@ for position, (_, row) in enumerate(
         "Tidak dinyatakan",
     )
 
-    trip_date = get_value(
+    trip_date_raw = get_value(
         row,
         cols["date"],
         "-",
     )
+    trip_date = display_date(trip_date_raw)
 
-    pickup_time = get_value(
+    pickup_time_raw = get_value(
         row,
         cols["time"],
         "-",
     )
+    pickup_time = display_time(pickup_time_raw)
 
     pax = get_value(
         row,
@@ -1322,7 +1524,7 @@ for position, (_, row) in enumerate(
     )
 
     whatsapp_message = (
-        f"Hi Admin SheGO, saya berminat nak claim job {booking_id}.\n\n"
+        f"Hi Admin SheGO, saya nak mohon claim job {booking_id}.\n\n"
         f"📍 Pickup: {pickup}\n"
         f"🏁 Destinasi: {destination}\n"
         f"📅 Tarikh: {trip_date}\n"
@@ -1330,8 +1532,9 @@ for position, (_, row) in enumerate(
         f"👥 Penumpang: {pax}\n"
         f"🚗 Jenis trip: {trip_type}\n"
         f"🧳 Bagasi: {baggage}\n"
-        f"💰 Tambang: {fare}\n\n"
-        "Boleh semak sama ada job ini masih Open?"
+        f"📝 Nota: {notes}\n"
+        f"💰 Tambang: {display_fare(fare)}\n\n"
+        "Boleh semak sama ada job ini masih Open dan confirmkan kepada saya?"
     )
 
     whatsapp_url = (
@@ -1356,8 +1559,9 @@ for position, (_, row) in enumerate(
         f"<td>{safe(pax)}</td>"
         f"<td>{safe(trip_type)}</td>"
         f"<td>{safe(baggage)}</td>"
+        f'<td class="note-cell">{safe(notes)}</td>'
         f'<td class="fare">{display_fare(fare)}</td>'
-        f'<td><a class="claim-btn" href="{safe_whatsapp}" target="_blank" rel="noopener">💬 Claim</a></td>'
+        f'<td><a class="claim-btn" href="{safe_whatsapp}" target="_blank" rel="noopener noreferrer">💬 Mohon Claim</a></td>'
         "</tr>"
     )
 
@@ -1400,14 +1604,29 @@ for position, (_, row) in enumerate(
                     <div class="meta-label">Jenis Trip</div>
                     <div class="meta-value">🚗 {safe(trip_type)}</div>
                 </div>
+                <div class="meta-box">
+                    <div class="meta-label">Bagasi</div>
+                    <div class="meta-value">🧳 {safe(baggage)}</div>
+                </div>
+                <div class="meta-box">
+                    <div class="meta-label">Tambang</div>
+                    <div class="meta-value">💰 {display_fare(fare)}</div>
+                </div>
+                <div class="meta-box" style="grid-column:1/-1;">
+                    <div class="meta-label">Nota</div>
+                    <div class="meta-value">📝 {safe(notes)}</div>
+                </div>
             </div>
 
             <a class="mobile-claim"
                href="{safe_whatsapp}"
                target="_blank"
-               rel="noopener">
-               💬 WhatsApp Admin untuk Claim
+               rel="noopener noreferrer">
+               💬 Mohon Claim melalui WhatsApp
             </a>
+            <div class="claim-help">
+                Job hanya dianggap Assigned selepas admin mengesahkan claim.
+            </div>
         </div>
         """
     )
@@ -1440,6 +1659,7 @@ desktop_table = (
     "<th>Penumpang</th>"
     "<th>Jenis Trip</th>"
     "<th>Bagasi</th>"
+    "<th>Nota</th>"
     "<th>Tambang</th>"
     "<th>Tindakan</th>"
     "</tr></thead>"
@@ -1466,9 +1686,11 @@ st.markdown(
 st.markdown(
     """
     <div class="privacy-note">
-        🔒 <b>Privasi pelanggan:</b> Nama dan nombor telefon pelanggan
-        tidak dipaparkan pada Driver Board. Maklumat tersebut hanya diberikan
-        selepas admin mengesahkan pemandu.
+        🔒 <b>Privasi pelanggan:</b> Driver Board ini sepatutnya hanya mengandungi
+        maklumat yang selamat untuk dilihat oleh pemandu. Jika Google Sheet ini
+        dibuka kepada public / “Anyone with the link”, jangan simpan nama,
+        nombor telefon atau maklumat sensitif pelanggan dalam spreadsheet public
+        yang sama.
     </div>
     """,
     unsafe_allow_html=True,
@@ -1479,10 +1701,11 @@ st.markdown(
     <div class="footer-note">
         💡 <b>Flow status:</b>
         <b>Open</b> = masih tersedia →
-        <b>Assigned</b> = sudah diberi kepada pemandu →
+        driver hantar permintaan claim →
+        admin sahkan pemandu dan tukar kepada <b>Assigned</b> →
         <b>Completed</b> = trip selesai →
         <b>Cancelled</b> = tempahan dibatalkan.
-        Hanya <b>Open</b> akan muncul di sini.
+        Hanya <b>Open</b> akan muncul di Driver Board.
     </div>
     """,
     unsafe_allow_html=True,
