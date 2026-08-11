@@ -21,7 +21,7 @@ SHEET_CACHE_TTL = 15
 st.set_page_config(
     page_title="SheGO Driver Board",
     page_icon="🚗",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="collapsed",
 )
 
@@ -477,15 +477,19 @@ else:
 
 
 # ============================================================
-# JOB LIST - NO CUSTOM HTML
+# JOB TABLE - NATIVE STREAMLIT ONLY
 # ============================================================
 st.divider()
 st.subheader("Senarai Job Open")
-st.caption(f"{len(filtered)} job sepadan")
+st.caption(
+    f"{len(filtered)} job sepadan • Pada telefon, swipe table ke kiri/kanan untuk lihat semua maklumat."
+)
 
 if filtered.empty:
     st.warning("Tiada job yang sepadan dengan filter anda.")
     st.stop()
+
+rows = []
 
 for _, row in filtered.iterrows():
     booking_id = clean_text(
@@ -523,31 +527,85 @@ for _, row in filtered.iterrows():
         f"?text={quote(whatsapp_message)}"
     )
 
-    with st.container(border=True):
-        st.subheader(booking_id)
-        st.caption("🟢 OPEN")
-        st.markdown(f"### {fare_display}")
+    rows.append(
+        {
+            "Booking ID": booking_id,
+            "Status": "OPEN",
+            "Pickup": pickup,
+            "Destinasi": destination,
+            "Tarikh": trip_date,
+            "Masa": pickup_time,
+            "Pax": pax,
+            "Jenis Trip": trip_type,
+            "Bagasi": baggage,
+            "Nota": notes,
+            "Tambang": fare_display,
+            "Claim": whatsapp_url,
+        }
+    )
 
-        st.write("📍 **Pickup**")
-        st.write(pickup)
-        st.write("⬇️")
-        st.write("🏁 **Destinasi**")
-        st.write(destination)
+job_table = pd.DataFrame(rows)
 
-        st.write(f"📅 {trip_date}  •  🕐 {pickup_time}")
-        st.write(f"👥 {pax}  •  🚗 {trip_type}")
+st.dataframe(
+    job_table,
+    hide_index=True,
+    use_container_width=True,
+    column_config={
+        "Booking ID": st.column_config.TextColumn(
+            "Booking ID",
+            width="small",
+        ),
+        "Status": st.column_config.TextColumn(
+            "Status",
+            width="small",
+        ),
+        "Pickup": st.column_config.TextColumn(
+            "Pickup",
+            width="medium",
+        ),
+        "Destinasi": st.column_config.TextColumn(
+            "Destinasi",
+            width="medium",
+        ),
+        "Tarikh": st.column_config.TextColumn(
+            "Tarikh",
+            width="small",
+        ),
+        "Masa": st.column_config.TextColumn(
+            "Masa",
+            width="small",
+        ),
+        "Pax": st.column_config.TextColumn(
+            "Pax",
+            width="small",
+        ),
+        "Jenis Trip": st.column_config.TextColumn(
+            "Jenis Trip",
+            width="small",
+        ),
+        "Bagasi": st.column_config.TextColumn(
+            "Bagasi",
+            width="small",
+        ),
+        "Nota": st.column_config.TextColumn(
+            "Nota",
+            width="medium",
+        ),
+        "Tambang": st.column_config.TextColumn(
+            "Tambang",
+            width="small",
+        ),
+        "Claim": st.column_config.LinkColumn(
+            "Tindakan",
+            display_text="Claim WhatsApp",
+            width="medium",
+        ),
+    },
+)
 
-        if baggage != "-":
-            st.write(f"🧳 Bagasi: {baggage}")
-
-        if notes != "-":
-            st.write(f"📝 Nota: {notes}")
-
-        st.link_button(
-            "💬 Mohon Claim di WhatsApp",
-            whatsapp_url,
-            use_container_width=True,
-        )
+st.caption(
+    "Tip telefon: swipe table secara mendatar untuk lihat kolum Tambang dan Claim WhatsApp."
+)
 
 
 # ============================================================
