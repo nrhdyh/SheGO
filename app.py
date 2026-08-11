@@ -14,6 +14,7 @@ SHEET_TAB = "Driver Board"
 ADMIN_WHATSAPP = "60125057046"
 VISIBLE_STATUS = "open"
 SHEET_CACHE_TTL = 15
+AUTO_REFRESH_INTERVAL = "2m"
 
 
 # ============================================================
@@ -570,347 +571,356 @@ st.markdown(
 
 
 # ============================================================
-# LOAD DATA
+# LIVE DATA BOARD
+# Auto refresh every 2 minutes. Filters remain in session_state.
 # ============================================================
-try:
-    jobs = load_jobs()
-except Exception as exc:
-    st.error(str(exc))
-    st.stop()
+@st.fragment(run_every=AUTO_REFRESH_INTERVAL)
+def live_board():
+    st.caption("🟢 Auto refresh setiap 2 minit • Tekan Refresh Data untuk kemas kini segera")
 
-if jobs.empty:
-    st.info("Google Sheet belum mempunyai data job.")
-    st.stop()
+    try:
+        jobs = load_jobs()
+    except Exception as exc:
+        st.error(str(exc))
+        st.stop()
 
-cols = {key: find_column(jobs, key) for key in COLUMN_ALIASES}
+    if jobs.empty:
+        st.info("Google Sheet belum mempunyai data job.")
+        st.stop()
 
-if not cols["status"]:
-    st.error(
-        "Column **Status** tidak dijumpai. "
-        "Pastikan tab Driver Board mempunyai column bernama `Status`."
-    )
-    st.stop()
+    cols = {key: find_column(jobs, key) for key in COLUMN_ALIASES}
 
-if not cols["pickup"] or not cols["destination"]:
-    st.error("Column Pickup atau Destinasi tidak dapat dikesan.")
-    with st.expander("Lihat column Google Sheet"):
-        st.write([
-            col for col in jobs.columns
-            if not str(col).startswith("_")
-        ])
-    st.stop()
+    if not cols["status"]:
+        st.error(
+            "Column **Status** tidak dijumpai. "
+            "Pastikan tab Driver Board mempunyai column bernama `Status`."
+        )
+        st.stop()
 
-jobs["_booking_display"] = jobs.apply(
-    lambda row: booking_display(row, cols["booking_id"]),
-    axis=1,
-)
+    if not cols["pickup"] or not cols["destination"]:
+        st.error("Column Pickup atau Destinasi tidak dapat dikesan.")
+        with st.expander("Lihat column Google Sheet"):
+            st.write([
+                col for col in jobs.columns
+                if not str(col).startswith("_")
+            ])
+        st.stop()
 
-normalized_status = (
-    jobs[cols["status"]]
-    .fillna("")
-    .astype(str)
-    .str.strip()
-    .str.casefold()
-)
-
-open_jobs = jobs[normalized_status.eq(VISIBLE_STATUS)].copy()
-
-if open_jobs.empty:
-    st.success("Tiada job Open buat masa ini.")
-    st.stop()
-
-
-# ============================================================
-# QUICK SUMMARY
-# ============================================================
-stat1, stat2, stat3 = st.columns(3)
-with stat1:
-    st.metric("Job Open", len(open_jobs))
-with stat2:
-    st.metric(
-        "Tarikh Aktif",
-        len(unique_values(open_jobs, cols["date"])) if cols["date"] else 0,
-    )
-with stat3:
-    st.metric(
-        "Jenis Trip",
-        len(unique_values(open_jobs, cols["trip_type"])) if cols["trip_type"] else 0,
+    jobs["_booking_display"] = jobs.apply(
+        lambda row: booking_display(row, cols["booking_id"]),
+        axis=1,
     )
 
-st.divider()
+    normalized_status = (
+        jobs[cols["status"]]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .str.casefold()
+    )
+
+    open_jobs = jobs[normalized_status.eq(VISIBLE_STATUS)].copy()
+
+    if open_jobs.empty:
+        st.success("Tiada job Open buat masa ini.")
+        st.stop()
 
 
-# ============================================================
-# FILTERS
-# ============================================================
-st.subheader("Cari Job")
-st.caption("Cari lokasi atau Booking ID, kemudian tapis ikut tarikh, jenis trip atau penumpang.")
-
-with st.container(border=True):
-    left, right = st.columns(2)
-
-    with left:
-        location_search = st.text_input(
-            "Pickup / Destinasi / Booking ID",
-            placeholder="Contoh: Ulu Tiram, Senai, SG-001...",
-            key="search_location",
-        ).strip().casefold()
-
-    with right:
-        date_options = unique_values(open_jobs, cols["date"])
-        selected_dates = (
-            st.multiselect(
-                "Tarikh",
-                options=date_options,
-                placeholder="Semua tarikh",
-                key="filter_dates",
-            )
-            if date_options else []
+    # ============================================================
+    # QUICK SUMMARY
+    # ============================================================
+    stat1, stat2, stat3 = st.columns(3)
+    with stat1:
+        st.metric("Job Open", len(open_jobs))
+    with stat2:
+        st.metric(
+            "Tarikh Aktif",
+            len(unique_values(open_jobs, cols["date"])) if cols["date"] else 0,
+        )
+    with stat3:
+        st.metric(
+            "Jenis Trip",
+            len(unique_values(open_jobs, cols["trip_type"])) if cols["trip_type"] else 0,
         )
 
-    left2, right2 = st.columns(2)
+    st.divider()
 
-    with left2:
-        trip_options = unique_values(open_jobs, cols["trip_type"])
-        selected_trip_types = (
-            st.multiselect(
-                "Jenis Trip",
-                options=trip_options,
-                placeholder="Semua jenis trip",
-                key="filter_trip_types",
+
+    # ============================================================
+    # FILTERS
+    # ============================================================
+    st.subheader("Cari Job")
+    st.caption("Cari lokasi atau Booking ID, kemudian tapis ikut tarikh, jenis trip atau penumpang.")
+
+    with st.container(border=True):
+        left, right = st.columns(2)
+
+        with left:
+            location_search = st.text_input(
+                "Pickup / Destinasi / Booking ID",
+                placeholder="Contoh: Ulu Tiram, Senai, SG-001...",
+                key="search_location",
+            ).strip().casefold()
+
+        with right:
+            date_options = unique_values(open_jobs, cols["date"])
+            selected_dates = (
+                st.multiselect(
+                    "Tarikh",
+                    options=date_options,
+                    placeholder="Semua tarikh",
+                    key="filter_dates",
+                )
+                if date_options else []
             )
-            if trip_options else []
+
+        left2, right2 = st.columns(2)
+
+        with left2:
+            trip_options = unique_values(open_jobs, cols["trip_type"])
+            selected_trip_types = (
+                st.multiselect(
+                    "Jenis Trip",
+                    options=trip_options,
+                    placeholder="Semua jenis trip",
+                    key="filter_trip_types",
+                )
+                if trip_options else []
+            )
+
+        with right2:
+            pax_options = unique_values(open_jobs, cols["pax"])
+            selected_pax = (
+                st.multiselect(
+                    "Penumpang",
+                    options=pax_options,
+                    placeholder="Semua",
+                    key="filter_pax",
+                )
+                if pax_options else []
+            )
+
+        sort_option = st.selectbox(
+            "Susun Job",
+            options=[
+                "Asal dari Google Sheet",
+                "Tambang tertinggi",
+                "Tambang terendah",
+            ],
+            key="sort_option",
         )
 
-    with right2:
-        pax_options = unique_values(open_jobs, cols["pax"])
-        selected_pax = (
-            st.multiselect(
-                "Penumpang",
-                options=pax_options,
-                placeholder="Semua",
-                key="filter_pax",
-            )
-            if pax_options else []
+        b1, b2 = st.columns(2)
+        with b1:
+            if st.button("↻ Refresh Data", use_container_width=True):
+                load_jobs.clear()
+                st.rerun()
+
+        with b2:
+            if st.button(
+                "Reset Filter",
+                use_container_width=True,
+                on_click=reset_filters,
+            ):
+                st.rerun()
+
+
+    # ============================================================
+    # APPLY FILTERS
+    # ============================================================
+    filtered = open_jobs.copy()
+
+    if location_search:
+        pickup_series = filtered[cols["pickup"]].fillna("").astype(str).str.casefold()
+        destination_series = filtered[cols["destination"]].fillna("").astype(str).str.casefold()
+        booking_series = filtered["_booking_display"].fillna("").astype(str).str.casefold()
+
+        filtered = filtered[
+            pickup_series.str.contains(location_search, regex=False, na=False)
+            | destination_series.str.contains(location_search, regex=False, na=False)
+            | booking_series.str.contains(location_search, regex=False, na=False)
+        ]
+
+    if selected_dates and cols["date"]:
+        filtered = filtered[
+            filtered[cols["date"]].astype(str).str.strip().isin(selected_dates)
+        ]
+
+    if selected_trip_types and cols["trip_type"]:
+        filtered = filtered[
+            filtered[cols["trip_type"]].astype(str).str.strip().isin(selected_trip_types)
+        ]
+
+    if selected_pax and cols["pax"]:
+        filtered = filtered[
+            filtered[cols["pax"]].astype(str).str.strip().isin(selected_pax)
+        ]
+
+    if cols["fare"] and sort_option != "Asal dari Google Sheet":
+        filtered = filtered.copy()
+        filtered["_fare_num"] = filtered[cols["fare"]].apply(fare_to_number)
+        filtered = filtered.sort_values(
+            "_fare_num",
+            ascending=(sort_option == "Tambang terendah"),
+            na_position="last",
+            kind="stable",
+        ).drop(columns=["_fare_num"])
+    else:
+        filtered = filtered.sort_values("_source_row", ascending=True, kind="stable")
+
+
+    # ============================================================
+    # RESULT HEADER
+    # ============================================================
+    st.divider()
+    st.subheader("Senarai Job Open")
+
+    st.markdown(
+        '<div class="result-bar">'
+        f'<div class="result-count">🚗 {len(filtered)} job sepadan</div>'
+        '<div class="result-note">Desktop: table • Tablet/telefon: card view automatik</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    if filtered.empty:
+        st.warning("Tiada job yang sepadan dengan filter anda.")
+        st.stop()
+
+
+    # ============================================================
+    # BUILD RESPONSIVE TABLE + CARDS
+    # Important: generated as compact HTML to avoid Markdown code blocks
+    # ============================================================
+    desktop_rows = []
+    mobile_cards = []
+
+    for _, row in filtered.iterrows():
+        booking_id = clean_text(
+            row.get("_booking_display", ""),
+            fallback_booking_id(row.get("_source_row")),
         )
 
-    sort_option = st.selectbox(
-        "Susun Job",
-        options=[
-            "Asal dari Google Sheet",
-            "Tambang tertinggi",
-            "Tambang terendah",
-        ],
-        key="sort_option",
+        pickup = get_value(row, cols["pickup"], "Tidak dinyatakan")
+        destination = get_value(row, cols["destination"], "Tidak dinyatakan")
+        trip_date = display_date(get_value(row, cols["date"], "-"))
+        pickup_time = display_time(get_value(row, cols["time"], "-"))
+        pax = get_value(row, cols["pax"], "-")
+        trip_type = get_value(row, cols["trip_type"], "-")
+        baggage = get_value(row, cols["baggage"], "-")
+        notes = get_value(row, cols["notes"], "-")
+        fare = get_value(row, cols["fare"], "Semak admin")
+        fare_display = display_fare(fare)
+
+        whatsapp_message = (
+            f"Hi Admin SheGO, saya nak mohon claim job {booking_id}.\n\n"
+            f"📍 Pickup: {pickup}\n"
+            f"🏁 Destinasi: {destination}\n"
+            f"📅 Tarikh: {trip_date}\n"
+            f"🕐 Masa: {pickup_time}\n"
+            f"👥 Penumpang: {pax}\n"
+            f"🚗 Jenis trip: {trip_type}\n"
+            f"🧳 Bagasi: {baggage}\n"
+            f"📝 Nota: {notes}\n"
+            f"💰 Tambang: {fare_display}\n\n"
+            "Boleh semak sama ada job ini masih Open dan confirmkan kepada saya?"
+        )
+
+        whatsapp_url = (
+            f"https://wa.me/{ADMIN_WHATSAPP}"
+            f"?text={quote(whatsapp_message)}"
+        )
+        safe_url = html.escape(whatsapp_url, quote=True)
+
+        bid = safe_text(booking_id)
+        pick = safe_text(pickup)
+        dest = safe_text(destination)
+        date_txt = safe_text(trip_date)
+        time_txt = safe_text(pickup_time)
+        pax_txt = safe_text(pax)
+        type_txt = safe_text(trip_type)
+        bag_txt = safe_text(baggage)
+        note_txt = safe_text(notes)
+        fare_txt = safe_text(fare_display)
+
+        desktop_rows.append(
+            '<tr>'
+            f'<td class="booking-cell">{bid}</td>'
+            '<td><span class="status-pill">● OPEN</span></td>'
+            f'<td class="route-cell">📍 {pick}<span class="route-arrow-inline">→</span>🏁 {dest}</td>'
+            f'<td>{date_txt}<br><span style="color:#888;font-size:.75rem">{time_txt}</span></td>'
+            f'<td>{pax_txt}</td>'
+            f'<td>{type_txt}</td>'
+            f'<td>{bag_txt}</td>'
+            f'<td class="fare-cell">{fare_txt}</td>'
+            f'<td><a class="claim-link" href="{safe_url}" target="_blank" rel="noopener noreferrer">💬 Claim</a></td>'
+            '</tr>'
+        )
+
+        extra_parts = []
+        if baggage not in {"", "-"}:
+            extra_parts.append(f"🧳 Bagasi: <b>{bag_txt}</b>")
+        if notes not in {"", "-"}:
+            extra_parts.append(f"📝 Nota: {note_txt}")
+
+        extra_html = "<br>".join(extra_parts) if extra_parts else "Tiada nota tambahan."
+
+        mobile_cards.append(
+            '<div class="job-card">'
+            '<div class="card-head">'
+            f'<div><div class="card-booking">{bid}</div><div style="margin-top:6px"><span class="status-pill">● OPEN</span></div></div>'
+            f'<div class="card-fare">{fare_txt}</div>'
+            '</div>'
+            '<div class="card-route">'
+            '<div class="card-label">Pickup</div>'
+            f'<div class="card-place">📍 {pick}</div>'
+            '<div class="card-route-arrow">↓</div>'
+            '<div class="card-label">Destinasi</div>'
+            f'<div class="card-place">🏁 {dest}</div>'
+            '</div>'
+            '<div class="card-meta">'
+            f'<div class="meta-item"><div class="meta-name">Tarikh</div><div class="meta-value">📅 {date_txt}</div></div>'
+            f'<div class="meta-item"><div class="meta-name">Masa</div><div class="meta-value">🕐 {time_txt}</div></div>'
+            f'<div class="meta-item"><div class="meta-name">Penumpang</div><div class="meta-value">👥 {pax_txt}</div></div>'
+            f'<div class="meta-item"><div class="meta-name">Jenis Trip</div><div class="meta-value">🚗 {type_txt}</div></div>'
+            '</div>'
+            f'<div class="card-extra">{extra_html}</div>'
+            f'<a class="card-claim" href="{safe_url}" target="_blank" rel="noopener noreferrer">💬 Mohon Claim di WhatsApp</a>'
+            '</div>'
+        )
+
+
+    desktop_html = (
+        '<div class="desktop-view"><div class="table-shell"><table class="job-table">'
+        '<thead><tr>'
+        '<th>Booking ID</th><th>Status</th><th>Route</th><th>Tarikh / Masa</th>'
+        '<th>Pax</th><th>Jenis Trip</th><th>Bagasi</th><th>Tambang</th><th>Tindakan</th>'
+        '</tr></thead><tbody>'
+        + "".join(desktop_rows)
+        + '</tbody></table></div></div>'
     )
 
-    b1, b2 = st.columns(2)
-    with b1:
-        if st.button("↻ Refresh Data", use_container_width=True):
-            load_jobs.clear()
-            st.rerun()
-
-    with b2:
-        if st.button(
-            "Reset Filter",
-            use_container_width=True,
-            on_click=reset_filters,
-        ):
-            st.rerun()
-
-
-# ============================================================
-# APPLY FILTERS
-# ============================================================
-filtered = open_jobs.copy()
-
-if location_search:
-    pickup_series = filtered[cols["pickup"]].fillna("").astype(str).str.casefold()
-    destination_series = filtered[cols["destination"]].fillna("").astype(str).str.casefold()
-    booking_series = filtered["_booking_display"].fillna("").astype(str).str.casefold()
-
-    filtered = filtered[
-        pickup_series.str.contains(location_search, regex=False, na=False)
-        | destination_series.str.contains(location_search, regex=False, na=False)
-        | booking_series.str.contains(location_search, regex=False, na=False)
-    ]
-
-if selected_dates and cols["date"]:
-    filtered = filtered[
-        filtered[cols["date"]].astype(str).str.strip().isin(selected_dates)
-    ]
-
-if selected_trip_types and cols["trip_type"]:
-    filtered = filtered[
-        filtered[cols["trip_type"]].astype(str).str.strip().isin(selected_trip_types)
-    ]
-
-if selected_pax and cols["pax"]:
-    filtered = filtered[
-        filtered[cols["pax"]].astype(str).str.strip().isin(selected_pax)
-    ]
-
-if cols["fare"] and sort_option != "Asal dari Google Sheet":
-    filtered = filtered.copy()
-    filtered["_fare_num"] = filtered[cols["fare"]].apply(fare_to_number)
-    filtered = filtered.sort_values(
-        "_fare_num",
-        ascending=(sort_option == "Tambang terendah"),
-        na_position="last",
-        kind="stable",
-    ).drop(columns=["_fare_num"])
-else:
-    filtered = filtered.sort_values("_source_row", ascending=True, kind="stable")
-
-
-# ============================================================
-# RESULT HEADER
-# ============================================================
-st.divider()
-st.subheader("Senarai Job Open")
-
-st.markdown(
-    '<div class="result-bar">'
-    f'<div class="result-count">🚗 {len(filtered)} job sepadan</div>'
-    '<div class="result-note">Desktop: table • Tablet/telefon: card view automatik</div>'
-    '</div>',
-    unsafe_allow_html=True,
-)
-
-if filtered.empty:
-    st.warning("Tiada job yang sepadan dengan filter anda.")
-    st.stop()
-
-
-# ============================================================
-# BUILD RESPONSIVE TABLE + CARDS
-# Important: generated as compact HTML to avoid Markdown code blocks
-# ============================================================
-desktop_rows = []
-mobile_cards = []
-
-for _, row in filtered.iterrows():
-    booking_id = clean_text(
-        row.get("_booking_display", ""),
-        fallback_booking_id(row.get("_source_row")),
+    mobile_html = (
+        '<div class="mobile-view"><div class="mobile-cards">'
+        + "".join(mobile_cards)
+        + '</div></div>'
     )
 
-    pickup = get_value(row, cols["pickup"], "Tidak dinyatakan")
-    destination = get_value(row, cols["destination"], "Tidak dinyatakan")
-    trip_date = display_date(get_value(row, cols["date"], "-"))
-    pickup_time = display_time(get_value(row, cols["time"], "-"))
-    pax = get_value(row, cols["pax"], "-")
-    trip_type = get_value(row, cols["trip_type"], "-")
-    baggage = get_value(row, cols["baggage"], "-")
-    notes = get_value(row, cols["notes"], "-")
-    fare = get_value(row, cols["fare"], "Semak admin")
-    fare_display = display_fare(fare)
+    st.markdown(desktop_html + mobile_html, unsafe_allow_html=True)
 
-    whatsapp_message = (
-        f"Hi Admin SheGO, saya nak mohon claim job {booking_id}.\n\n"
-        f"📍 Pickup: {pickup}\n"
-        f"🏁 Destinasi: {destination}\n"
-        f"📅 Tarikh: {trip_date}\n"
-        f"🕐 Masa: {pickup_time}\n"
-        f"👥 Penumpang: {pax}\n"
-        f"🚗 Jenis trip: {trip_type}\n"
-        f"🧳 Bagasi: {baggage}\n"
-        f"📝 Nota: {notes}\n"
-        f"💰 Tambang: {fare_display}\n\n"
-        "Boleh semak sama ada job ini masih Open dan confirmkan kepada saya?"
+
+    # ============================================================
+    # FOOTER
+    # ============================================================
+    st.divider()
+    st.caption(
+        "🔒 Nama dan nombor telefon pelanggan tidak dipaparkan pada Driver Board. "
+        "Maklumat pelanggan hanya diberi selepas admin mengesahkan pemandu."
     )
-
-    whatsapp_url = (
-        f"https://wa.me/{ADMIN_WHATSAPP}"
-        f"?text={quote(whatsapp_message)}"
-    )
-    safe_url = html.escape(whatsapp_url, quote=True)
-
-    bid = safe_text(booking_id)
-    pick = safe_text(pickup)
-    dest = safe_text(destination)
-    date_txt = safe_text(trip_date)
-    time_txt = safe_text(pickup_time)
-    pax_txt = safe_text(pax)
-    type_txt = safe_text(trip_type)
-    bag_txt = safe_text(baggage)
-    note_txt = safe_text(notes)
-    fare_txt = safe_text(fare_display)
-
-    desktop_rows.append(
-        '<tr>'
-        f'<td class="booking-cell">{bid}</td>'
-        '<td><span class="status-pill">● OPEN</span></td>'
-        f'<td class="route-cell">📍 {pick}<span class="route-arrow-inline">→</span>🏁 {dest}</td>'
-        f'<td>{date_txt}<br><span style="color:#888;font-size:.75rem">{time_txt}</span></td>'
-        f'<td>{pax_txt}</td>'
-        f'<td>{type_txt}</td>'
-        f'<td>{bag_txt}</td>'
-        f'<td class="fare-cell">{fare_txt}</td>'
-        f'<td><a class="claim-link" href="{safe_url}" target="_blank" rel="noopener noreferrer">💬 Claim</a></td>'
-        '</tr>'
-    )
-
-    extra_parts = []
-    if baggage not in {"", "-"}:
-        extra_parts.append(f"🧳 Bagasi: <b>{bag_txt}</b>")
-    if notes not in {"", "-"}:
-        extra_parts.append(f"📝 Nota: {note_txt}")
-
-    extra_html = "<br>".join(extra_parts) if extra_parts else "Tiada nota tambahan."
-
-    mobile_cards.append(
-        '<div class="job-card">'
-        '<div class="card-head">'
-        f'<div><div class="card-booking">{bid}</div><div style="margin-top:6px"><span class="status-pill">● OPEN</span></div></div>'
-        f'<div class="card-fare">{fare_txt}</div>'
-        '</div>'
-        '<div class="card-route">'
-        '<div class="card-label">Pickup</div>'
-        f'<div class="card-place">📍 {pick}</div>'
-        '<div class="card-route-arrow">↓</div>'
-        '<div class="card-label">Destinasi</div>'
-        f'<div class="card-place">🏁 {dest}</div>'
-        '</div>'
-        '<div class="card-meta">'
-        f'<div class="meta-item"><div class="meta-name">Tarikh</div><div class="meta-value">📅 {date_txt}</div></div>'
-        f'<div class="meta-item"><div class="meta-name">Masa</div><div class="meta-value">🕐 {time_txt}</div></div>'
-        f'<div class="meta-item"><div class="meta-name">Penumpang</div><div class="meta-value">👥 {pax_txt}</div></div>'
-        f'<div class="meta-item"><div class="meta-name">Jenis Trip</div><div class="meta-value">🚗 {type_txt}</div></div>'
-        '</div>'
-        f'<div class="card-extra">{extra_html}</div>'
-        f'<a class="card-claim" href="{safe_url}" target="_blank" rel="noopener noreferrer">💬 Mohon Claim di WhatsApp</a>'
-        '</div>'
+    st.caption(
+        "Flow: Open → Assigned → Completed. Cancelled digunakan jika tempahan dibatalkan."
     )
 
 
-desktop_html = (
-    '<div class="desktop-view"><div class="table-shell"><table class="job-table">'
-    '<thead><tr>'
-    '<th>Booking ID</th><th>Status</th><th>Route</th><th>Tarikh / Masa</th>'
-    '<th>Pax</th><th>Jenis Trip</th><th>Bagasi</th><th>Tambang</th><th>Tindakan</th>'
-    '</tr></thead><tbody>'
-    + "".join(desktop_rows)
-    + '</tbody></table></div></div>'
-)
 
-mobile_html = (
-    '<div class="mobile-view"><div class="mobile-cards">'
-    + "".join(mobile_cards)
-    + '</div></div>'
-)
-
-st.markdown(desktop_html + mobile_html, unsafe_allow_html=True)
-
-
-# ============================================================
-# FOOTER
-# ============================================================
-st.divider()
-st.caption(
-    "🔒 Nama dan nombor telefon pelanggan tidak dipaparkan pada Driver Board. "
-    "Maklumat pelanggan hanya diberi selepas admin mengesahkan pemandu."
-)
-st.caption(
-    "Flow: Open → Assigned → Completed. Cancelled digunakan jika tempahan dibatalkan."
-)
+live_board()
