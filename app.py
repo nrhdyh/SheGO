@@ -37,214 +37,494 @@ st.markdown(
 <style>
 :root { color-scheme: light !important; }
 
-/* Keep the page clean without fighting Streamlit too much */
-.block-container {
-    max-width: 1220px;
-    padding-top: 1.2rem;
-    padding-bottom: 3rem;
+html, body, .stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"] {
+    background: #fffafb !important;
+    color: #1f1b1d !important;
 }
 
 #MainMenu, footer { visibility: hidden; }
+header[data-testid="stHeader"] {
+    background: rgba(255,250,251,.94) !important;
+    border-bottom: 1px solid rgba(231,92,137,.08);
+    backdrop-filter: blur(12px);
+}
 
-.shego-brand {
+.block-container {
+    max-width: 1280px;
+    padding-top: 1.15rem;
+    padding-bottom: 4rem;
+}
+
+/* ---------- Brand bar ---------- */
+.shego-topbar {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin: 2px 0 18px;
+}
+.brand-wrap {
     display:flex;
     align-items:center;
     gap:12px;
-    margin:4px 0 18px 0;
 }
 .shego-logo {
-    width:44px;
-    height:44px;
-    border-radius:14px;
+    width:46px;
+    height:46px;
+    border-radius:15px;
     display:flex;
     align-items:center;
     justify-content:center;
-    background:#e85c8a;
-    color:white;
-    font-weight:900;
+    background:linear-gradient(135deg,#ea5d8d,#f39ab6);
+    color:#fff;
+    font-weight:950;
     font-size:20px;
+    box-shadow:0 8px 22px rgba(232,92,138,.22);
 }
 .shego-name {
-    font-size:1.45rem;
-    font-weight:900;
-    line-height:1.05;
-    color:#171717;
+    font-size:1.5rem;
+    font-weight:950;
+    line-height:1;
+    letter-spacing:-.04em;
+    color:#1f1b1d;
 }
 .shego-name span { color:#e85c8a; }
 .shego-sub {
-    color:#777;
-    font-size:.82rem;
-    margin-top:4px;
+    color:#8d7d83;
+    font-size:.8rem;
+    margin-top:5px;
+    font-weight:650;
+}
+.sync-pill {
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 12px;
+    border-radius:999px;
+    background:#fff;
+    color:#5f5056;
+    border:1px solid #f0dbe2;
+    font-size:.76rem;
+    font-weight:800;
+    box-shadow:0 5px 16px rgba(98,49,67,.04);
+}
+.sync-dot {
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#22a06b;
+    box-shadow:0 0 0 4px rgba(34,160,107,.10);
 }
 
+/* ---------- Hero ---------- */
 .shego-hero {
-    border:1px solid #ececec;
-    border-radius:20px;
-    padding:24px;
+    position:relative;
+    overflow:hidden;
+    border:1px solid #f0dfe5;
+    border-radius:26px;
+    padding:34px 34px 32px;
     margin-bottom:18px;
-    background:linear-gradient(135deg,#ffffff 65%,#fff3f7 100%);
+    background:
+        radial-gradient(circle at 92% 4%, rgba(255,213,228,.95) 0, rgba(255,213,228,.22) 28%, transparent 52%),
+        linear-gradient(135deg,#ffffff 0%,#fff9fb 58%,#fff3f7 100%);
+    box-shadow:0 16px 40px rgba(93,48,64,.07);
+}
+.hero-eyebrow {
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:7px 11px;
+    border-radius:999px;
+    background:#fff;
+    color:#c44872;
+    border:1px solid #f1d5df;
+    font-size:.73rem;
+    font-weight:900;
+    letter-spacing:.04em;
+    text-transform:uppercase;
 }
 .shego-hero h1 {
-    margin:0 0 8px 0;
-    color:#171717;
-    font-size:clamp(1.8rem,4vw,2.7rem);
-    line-height:1.08;
-    letter-spacing:-.035em;
+    max-width:780px;
+    margin:16px 0 10px;
+    color:#1f1b1d;
+    font-size:clamp(2.1rem,5vw,3.55rem);
+    line-height:1.02;
+    letter-spacing:-.055em;
 }
 .shego-hero p {
+    max-width:800px;
     margin:0;
-    color:#666;
-    line-height:1.65;
-    max-width:850px;
+    color:#76676d;
+    line-height:1.7;
+    font-size:.98rem;
+}
+.hero-note {
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:19px;
+}
+.hero-chip {
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:7px 10px;
+    border-radius:10px;
+    background:rgba(255,255,255,.82);
+    border:1px solid #f1e3e8;
+    color:#6d5f64;
+    font-size:.75rem;
+    font-weight:750;
 }
 
+/* ---------- Stats ---------- */
+.stats-grid {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px;
+    margin: 0 0 22px;
+}
+.stat-card {
+    position:relative;
+    overflow:hidden;
+    min-height:96px;
+    padding:17px 18px;
+    border-radius:18px;
+    border:1px solid #eee1e5;
+    background:#fff;
+    box-shadow:0 6px 20px rgba(76,46,57,.035);
+}
+.stat-card:after {
+    content:"";
+    position:absolute;
+    right:-16px;
+    bottom:-28px;
+    width:84px;
+    height:84px;
+    border-radius:50%;
+    background:#fff2f6;
+}
+.stat-icon {
+    font-size:1rem;
+    margin-bottom:7px;
+}
+.stat-label {
+    color:#96858b;
+    font-size:.7rem;
+    font-weight:850;
+    letter-spacing:.055em;
+    text-transform:uppercase;
+}
+.stat-value {
+    position:relative;
+    z-index:1;
+    margin-top:3px;
+    color:#241f21;
+    font-size:1.45rem;
+    font-weight:950;
+    letter-spacing:-.025em;
+}
+
+/* ---------- Section headings ---------- */
+.section-head {
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
+    margin: 7px 0 11px;
+}
+.section-title {
+    color:#251f21;
+    font-size:1.12rem;
+    font-weight:950;
+    letter-spacing:-.02em;
+}
+.section-sub {
+    color:#928188;
+    font-size:.8rem;
+    margin-top:3px;
+}
+
+/* ---------- Native Streamlit widgets ---------- */
+label, [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] span {
+    color:#44393d !important;
+    font-weight:750 !important;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background:rgba(255,255,255,.92) !important;
+    border:1px solid #eedfe4 !important;
+    border-radius:20px !important;
+    box-shadow:0 8px 25px rgba(77,42,55,.035);
+}
+
+[data-testid="stTextInput"] div[data-baseweb="input"],
+[data-testid="stTextInput"] div[data-baseweb="input"] > div,
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+[data-testid="stMultiSelect"] div[data-baseweb="select"] > div {
+    background:#fff !important;
+    border-color:#e5d9dd !important;
+    color:#221d1f !important;
+    box-shadow:none !important;
+    border-radius:11px !important;
+}
+
+[data-testid="stTextInput"] input,
+[data-testid="stSelectbox"] input,
+[data-testid="stMultiSelect"] input,
+[data-testid="stSelectbox"] span,
+[data-testid="stMultiSelect"] span {
+    color:#221d1f !important;
+    -webkit-text-fill-color:#221d1f !important;
+}
+
+[data-testid="stTextInput"] input::placeholder {
+    color:#a5979c !important;
+    -webkit-text-fill-color:#a5979c !important;
+}
+
+[data-baseweb="tag"] {
+    background:#fff0f5 !important;
+    border:1px solid #f3ccd9 !important;
+    color:#b83e67 !important;
+    border-radius:8px !important;
+}
+[data-baseweb="tag"] span, [data-baseweb="tag"] div {
+    color:#b83e67 !important;
+    -webkit-text-fill-color:#b83e67 !important;
+}
+
+div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"] {
+    background:#fff !important;
+    color:#251f21 !important;
+}
+li[role="option"], div[role="option"] {
+    background:#fff !important;
+    color:#251f21 !important;
+}
+li[role="option"]:hover, div[role="option"]:hover,
+li[role="option"][aria-selected="true"], div[role="option"][aria-selected="true"] {
+    background:#fff1f5 !important;
+    color:#b83e67 !important;
+}
+
+.stButton > button {
+    min-height:42px;
+    border-radius:11px !important;
+    border:1px solid #e3d7db !important;
+    background:#fff !important;
+    color:#43373c !important;
+    font-weight:850 !important;
+    transition:.15s ease !important;
+}
+.stButton > button:hover {
+    border-color:#e85c8a !important;
+    color:#c84672 !important;
+    transform:translateY(-1px);
+}
+
+/* ---------- Result bar ---------- */
 .result-bar {
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap:12px;
-    margin:12px 0 12px;
+    margin:12px 0;
     flex-wrap:wrap;
 }
 .result-count {
     display:inline-flex;
     align-items:center;
-    padding:7px 11px;
+    gap:7px;
+    padding:8px 12px;
     border-radius:999px;
-    background:#fff3f7;
-    color:#c84672;
-    border:1px solid #f2d6df;
-    font-size:.82rem;
-    font-weight:800;
+    background:#fff0f5;
+    color:#bc426b;
+    border:1px solid #f1cfd9;
+    font-size:.8rem;
+    font-weight:900;
 }
 .result-note {
-    color:#858585;
-    font-size:.78rem;
+    color:#9a8a90;
+    font-size:.76rem;
 }
 
-/* ---------------- Desktop table ---------------- */
+/* ---------- Desktop table ---------- */
 .desktop-view { display:block; }
 .mobile-view { display:none; }
-
 .table-shell {
     width:100%;
     overflow-x:auto;
-    border:1px solid #e7e7e7;
-    border-radius:16px;
+    border:1px solid #eadde2;
+    border-radius:20px;
     background:#fff;
+    box-shadow:0 10px 30px rgba(72,43,53,.045);
 }
 .job-table {
     width:100%;
-    min-width:980px;
-    border-collapse:collapse;
+    min-width:1040px;
+    border-collapse:separate;
+    border-spacing:0;
     background:#fff;
 }
 .job-table th {
-    padding:12px 13px;
+    position:sticky;
+    top:0;
+    z-index:1;
+    padding:13px 14px;
     text-align:left;
-    background:#fafafa;
-    border-bottom:1px solid #e7e7e7;
-    color:#666;
-    font-size:.74rem;
+    background:#fff8fa;
+    border-bottom:1px solid #eadde2;
+    color:#806f75;
+    font-size:.7rem;
+    font-weight:900;
+    letter-spacing:.035em;
+    text-transform:uppercase;
     white-space:nowrap;
 }
 .job-table td {
-    padding:13px;
-    border-bottom:1px solid #eeeeee;
-    color:#242424;
-    font-size:.84rem;
+    padding:14px;
+    border-bottom:1px solid #f1eaed;
+    color:#2d2729;
+    font-size:.82rem;
     vertical-align:middle;
 }
 .job-table tr:last-child td { border-bottom:none; }
-.job-table tbody tr:hover { background:#fffafb; }
-.booking-cell { font-weight:900; white-space:nowrap; }
-.route-cell { min-width:180px; font-weight:650; }
-.route-arrow-inline { color:#d46a91; margin:0 5px; }
-.fare-cell { font-weight:900; white-space:nowrap; }
+.job-table tbody tr { transition:.15s ease; }
+.job-table tbody tr:hover { background:#fff9fb; }
+.booking-cell {
+    font-weight:950;
+    color:#2b2427;
+    white-space:nowrap;
+}
+.route-cell {
+    min-width:230px;
+    font-weight:720;
+    line-height:1.45;
+}
+.route-arrow-inline {
+    color:#e17b9d;
+    margin:0 7px;
+}
+.fare-cell {
+    color:#bb3f69;
+    font-weight:950;
+    white-space:nowrap;
+}
 .status-pill {
     display:inline-flex;
     align-items:center;
     gap:5px;
     padding:5px 8px;
     border-radius:999px;
-    background:#edf9f3;
-    color:#147b58;
-    border:1px solid #d5eee0;
-    font-size:.68rem;
-    font-weight:850;
+    background:#eef9f4;
+    color:#18815e;
+    border:1px solid #d4eee2;
+    font-size:.66rem;
+    font-weight:900;
     white-space:nowrap;
 }
 .claim-link {
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    padding:8px 11px;
-    border-radius:9px;
-    background:#e85c8a;
+    padding:9px 12px;
+    border-radius:10px;
+    background:linear-gradient(135deg,#e85c8a,#df4f80);
     color:white !important;
     text-decoration:none !important;
-    font-size:.75rem;
-    font-weight:800;
+    font-size:.73rem;
+    font-weight:900;
     white-space:nowrap;
+    box-shadow:0 5px 14px rgba(232,92,138,.18);
+    transition:.15s ease;
 }
-.claim-link:hover { background:#cf4c77; }
+.claim-link:hover {
+    transform:translateY(-1px);
+    box-shadow:0 7px 18px rgba(232,92,138,.24);
+}
 
-/* ---------------- Tablet / phone cards ---------------- */
+/* ---------- Tablet / phone cards ---------- */
 .mobile-cards {
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:13px;
+    gap:14px;
 }
 .job-card {
-    border:1px solid #e8e8e8;
-    border-radius:17px;
+    position:relative;
+    overflow:hidden;
+    border:1px solid #eadde2;
+    border-radius:20px;
     background:#fff;
-    padding:16px;
-    box-shadow:0 4px 15px rgba(0,0,0,.025);
+    padding:17px;
+    box-shadow:0 8px 24px rgba(73,43,54,.045);
+}
+.job-card:before {
+    content:"";
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:0;
+    width:4px;
+    background:linear-gradient(180deg,#e85c8a,#f3aac0);
 }
 .card-head {
     display:flex;
     align-items:flex-start;
     justify-content:space-between;
     gap:10px;
-    margin-bottom:12px;
+    margin-bottom:13px;
+}
+.card-kicker {
+    color:#a28f96;
+    font-size:.61rem;
+    font-weight:900;
+    letter-spacing:.07em;
+    text-transform:uppercase;
+    margin-bottom:3px;
 }
 .card-booking {
-    color:#171717;
-    font-size:1rem;
-    font-weight:900;
+    color:#241f21;
+    font-size:1.02rem;
+    font-weight:950;
 }
 .card-fare {
-    color:#171717;
-    font-size:1.05rem;
-    font-weight:900;
+    color:#bd426b;
+    font-size:1.08rem;
+    font-weight:950;
     text-align:right;
 }
 .card-route {
-    padding:12px;
-    background:#fafafa;
-    border:1px solid #eeeeee;
-    border-radius:13px;
+    position:relative;
+    padding:13px 13px 13px 15px;
+    background:#fff9fb;
+    border:1px solid #f0e4e8;
+    border-radius:14px;
     margin-bottom:12px;
 }
 .card-label {
-    color:#929292;
-    font-size:.65rem;
-    font-weight:850;
-    letter-spacing:.05em;
+    color:#9b8990;
+    font-size:.62rem;
+    font-weight:900;
+    letter-spacing:.06em;
     text-transform:uppercase;
 }
 .card-place {
-    color:#1f1f1f;
-    font-size:.91rem;
-    font-weight:750;
+    color:#2c2528;
+    font-size:.9rem;
+    font-weight:760;
     line-height:1.4;
     margin-top:2px;
 }
 .card-route-arrow {
-    color:#d46a91;
-    font-weight:900;
+    color:#df7095;
+    font-weight:950;
     margin:5px 0;
+    padding-left:2px;
 }
 .card-meta {
     display:grid;
@@ -253,28 +533,34 @@ st.markdown(
     margin-bottom:10px;
 }
 .meta-item {
-    border:1px solid #eeeeee;
-    border-radius:11px;
-    padding:9px 10px;
+    border:1px solid #f0e7ea;
+    border-radius:12px;
+    padding:10px;
+    background:#fff;
 }
 .meta-name {
-    color:#8c8c8c;
-    font-size:.64rem;
-    font-weight:800;
+    color:#a08e94;
+    font-size:.61rem;
+    font-weight:900;
     text-transform:uppercase;
+    letter-spacing:.04em;
 }
 .meta-value {
-    margin-top:2px;
-    color:#282828;
-    font-size:.81rem;
-    font-weight:650;
+    margin-top:3px;
+    color:#352d30;
+    font-size:.8rem;
+    font-weight:720;
     overflow-wrap:anywhere;
 }
 .card-extra {
-    color:#666;
-    font-size:.78rem;
+    color:#73656a;
+    background:#fffafa;
+    border:1px dashed #eadce1;
+    border-radius:11px;
+    padding:9px 10px;
+    font-size:.75rem;
     line-height:1.55;
-    margin:8px 0 12px;
+    margin:9px 0 12px;
 }
 .card-claim {
     display:flex;
@@ -282,13 +568,28 @@ st.markdown(
     box-sizing:border-box;
     align-items:center;
     justify-content:center;
-    padding:10px 12px;
-    border-radius:11px;
-    background:#e85c8a;
+    padding:11px 12px;
+    border-radius:12px;
+    background:linear-gradient(135deg,#e85c8a,#df4f80);
     color:white !important;
     text-decoration:none !important;
-    font-size:.8rem;
-    font-weight:850;
+    font-size:.79rem;
+    font-weight:900;
+    box-shadow:0 6px 16px rgba(232,92,138,.18);
+}
+
+.info-strip {
+    margin-top:16px;
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
+    padding:12px 14px;
+    border:1px solid #eee0e5;
+    border-radius:14px;
+    background:#fff;
+    color:#77686e;
+    font-size:.77rem;
+    line-height:1.55;
 }
 
 @media (max-width:1024px) {
@@ -299,18 +600,29 @@ st.markdown(
     }
     .desktop-view { display:none !important; }
     .mobile-view { display:block !important; }
-    .shego-hero { padding:20px; }
+    .shego-hero { padding:27px 24px; }
 }
 
-@media (max-width:640px) {
+@media (max-width:760px) {
+    .sync-pill { display:none; }
+    .stats-grid { grid-template-columns:1fr 1fr 1fr; gap:8px; }
+    .stat-card { min-height:82px; padding:13px 12px; border-radius:15px; }
+    .stat-value { font-size:1.18rem; }
+    .stat-label { font-size:.59rem; }
     .mobile-cards { grid-template-columns:1fr; }
-    .shego-hero { padding:18px; border-radius:17px; }
-    .shego-hero h1 { font-size:1.85rem; }
-    .card-meta { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .shego-hero { padding:22px 18px; border-radius:20px; }
+    .shego-hero h1 { font-size:2rem; }
+    .hero-note { gap:6px; }
+    .hero-chip { font-size:.69rem; }
 }
 
-@media (max-width:390px) {
-    .card-meta { grid-template-columns:1fr; }
+@media (max-width:430px) {
+    .block-container { padding-left:.75rem; padding-right:.75rem; }
+    .shego-logo { width:42px; height:42px; border-radius:13px; }
+    .shego-name { font-size:1.35rem; }
+    .stats-grid { grid-template-columns:1fr; }
+    .stat-card { min-height:auto; }
+    .card-meta { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 </style>
 """,
@@ -551,20 +863,29 @@ def reset_filters():
 # HEADER
 # ============================================================
 st.markdown(
-    '<div class="shego-brand">'
+    '<div class="shego-topbar">'
+    '<div class="brand-wrap">'
     '<div class="shego-logo">S</div>'
     '<div><div class="shego-name"><span>She</span>GO</div>'
     '<div class="shego-sub">Driver Job Board • Johor</div></div>'
+    '</div>'
+    '<div class="sync-pill"><span class="sync-dot"></span>Auto Sync • setiap 2 minit</div>'
     '</div>',
     unsafe_allow_html=True,
 )
 
 st.markdown(
     '<section class="shego-hero">'
-    '<h1>Cari trip yang sesuai dengan anda.</h1>'
-    '<p>Hanya tempahan berstatus <b>Open</b> dipaparkan. '
-    'Pemandu boleh pilih job dan hantar permohonan claim melalui WhatsApp. '
-    'Job hanya dianggap assigned selepas admin mengesahkan.</p>'
+    '<span class="hero-eyebrow">🚗 Job Board Pemandu</span>'
+    '<h1>Pilih trip yang sesuai dengan masa dan kawasan anda.</h1>'
+    '<p>Semua job di bawah masih berstatus <b>Open</b>. '
+    'Tekan <b>Mohon Claim</b> untuk hubungi admin melalui WhatsApp. '
+    'Job hanya menjadi milik pemandu selepas admin mengesahkan dan menukar status kepada <b>Assigned</b>.</p>'
+    '<div class="hero-note">'
+    '<span class="hero-chip">📍 Johor</span>'
+    '<span class="hero-chip">🔄 Auto update</span>'
+    '<span class="hero-chip">🔒 Maklumat pelanggan dilindungi</span>'
+    '</div>'
     '</section>',
     unsafe_allow_html=True,
 )
@@ -576,7 +897,7 @@ st.markdown(
 # ============================================================
 @st.fragment(run_every=AUTO_REFRESH_INTERVAL)
 def live_board():
-    st.caption("🟢 Auto refresh setiap 2 minit • Tekan Refresh Data untuk kemas kini segera")
+    st.caption("🟢 Data diselaraskan automatik setiap 2 minit • Refresh manual masih tersedia")
 
     try:
         jobs = load_jobs()
@@ -629,28 +950,29 @@ def live_board():
     # ============================================================
     # QUICK SUMMARY
     # ============================================================
-    stat1, stat2, stat3 = st.columns(3)
-    with stat1:
-        st.metric("Job Open", len(open_jobs))
-    with stat2:
-        st.metric(
-            "Tarikh Aktif",
-            len(unique_values(open_jobs, cols["date"])) if cols["date"] else 0,
-        )
-    with stat3:
-        st.metric(
-            "Jenis Trip",
-            len(unique_values(open_jobs, cols["trip_type"])) if cols["trip_type"] else 0,
-        )
+    active_dates = len(unique_values(open_jobs, cols["date"])) if cols["date"] else 0
+    trip_type_count = len(unique_values(open_jobs, cols["trip_type"])) if cols["trip_type"] else 0
 
-    st.divider()
+    st.markdown(
+        '<div class="stats-grid">'
+        f'<div class="stat-card"><div class="stat-icon">🚘</div><div class="stat-label">Job Open</div><div class="stat-value">{len(open_jobs)}</div></div>'
+        f'<div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">Tarikh Aktif</div><div class="stat-value">{active_dates if active_dates else "-"}</div></div>'
+        f'<div class="stat-card"><div class="stat-icon">🛣️</div><div class="stat-label">Jenis Trip</div><div class="stat-value">{trip_type_count if trip_type_count else "-"}</div></div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 
     # ============================================================
     # FILTERS
     # ============================================================
-    st.subheader("Cari Job")
-    st.caption("Cari lokasi atau Booking ID, kemudian tapis ikut tarikh, jenis trip atau penumpang.")
+    st.markdown(
+        '<div class="section-head"><div>'
+        '<div class="section-title">🔎 Cari Job</div>'
+        '<div class="section-sub">Cari lokasi atau Booking ID, kemudian tapis mengikut keperluan anda.</div>'
+        '</div></div>',
+        unsafe_allow_html=True,
+    )
 
     with st.container(border=True):
         left, right = st.columns(2)
@@ -772,8 +1094,13 @@ def live_board():
     # ============================================================
     # RESULT HEADER
     # ============================================================
-    st.divider()
-    st.subheader("Senarai Job Open")
+    st.markdown(
+        '<div class="section-head" style="margin-top:22px"><div>'
+        '<div class="section-title">Available Trips</div>'
+        '<div class="section-sub">Pilih job yang sesuai dan hantar permohonan claim kepada admin.</div>'
+        '</div></div>',
+        unsafe_allow_html=True,
+    )
 
     st.markdown(
         '<div class="result-bar">'
@@ -868,7 +1195,7 @@ def live_board():
         mobile_cards.append(
             '<div class="job-card">'
             '<div class="card-head">'
-            f'<div><div class="card-booking">{bid}</div><div style="margin-top:6px"><span class="status-pill">● OPEN</span></div></div>'
+            f'<div><div class="card-kicker">Available Job</div><div class="card-booking">{bid}</div><div style="margin-top:6px"><span class="status-pill">● OPEN</span></div></div>'
             f'<div class="card-fare">{fare_txt}</div>'
             '</div>'
             '<div class="card-route">'
@@ -912,13 +1239,16 @@ def live_board():
     # ============================================================
     # FOOTER
     # ============================================================
-    st.divider()
-    st.caption(
-        "🔒 Nama dan nombor telefon pelanggan tidak dipaparkan pada Driver Board. "
-        "Maklumat pelanggan hanya diberi selepas admin mengesahkan pemandu."
+    st.markdown(
+        '<div class="info-strip">🔒 <div><b>Privasi pelanggan</b><br>'
+        'Nama dan nombor telefon pelanggan tidak dipaparkan pada Driver Board. '
+        'Maklumat tersebut hanya diberikan selepas admin mengesahkan pemandu.</div></div>',
+        unsafe_allow_html=True,
     )
-    st.caption(
-        "Flow: Open → Assigned → Completed. Cancelled digunakan jika tempahan dibatalkan."
+    st.markdown(
+        '<div class="info-strip">ℹ️ <div><b>Flow status</b><br>'
+        'Open → Assigned → Completed. Status Cancelled digunakan apabila tempahan dibatalkan.</div></div>',
+        unsafe_allow_html=True,
     )
 
 
