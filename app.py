@@ -810,33 +810,52 @@ def display_fare(value):
 
 
 def display_date(value):
-    """Display dates consistently as DD-MM-YYYY without changing Sheet values."""
+    """Convert Google Sheet dates to DD-MM-YYYY for display."""
     text = clean_text(value, "-")
     if text == "-":
         return text
 
-    # Google Sheets/CSV can return dates in several common formats.
-    # Malaysia-style day-first formats are preferred for ambiguous numeric dates.
     date_part = re.split(r"[ T]", text, maxsplit=1)[0].strip()
 
-    formats = (
-        "%Y-%m-%d",
-        "%Y/%m/%d",
-        "%d/%m/%Y",
-        "%d-%m-%Y",
-        "%d.%m.%Y",
-    )
-
-    for fmt in formats:
+    # ISO / year-first values are unambiguous.
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d"):
         try:
             parsed = pd.to_datetime(date_part, format=fmt, errors="raise")
             return parsed.strftime("%d-%m-%Y")
         except (ValueError, TypeError):
             pass
 
-    # Last fallback for values such as 8/11/2026.
+    # Google Sheets gviz/CSV for this sheet is returning numeric dates as
+    # M/D/YYYY (for example 8/12/2026 = 12 August 2026).
+    # We still detect unambiguous D/M/YYYY values safely when the first
+    # number is greater than 12.
+    match = re.fullmatch(r"(\d{1,2})[/-](\d{1,2})[/-](\d{4})", date_part)
+    if match:
+        first, second, year = map(int, match.groups())
+
+        if first > 12 and second <= 12:
+            # Clearly D/M/YYYY.
+            day, month = first, second
+        else:
+            # M/D/YYYY, including ambiguous values such as 8/12/2026.
+            month, day = first, second
+
+        try:
+            parsed = pd.Timestamp(year=year, month=month, day=day)
+            return parsed.strftime("%d-%m-%Y")
+        except (ValueError, TypeError):
+            return text
+
+    # Dot-separated dates are treated as D.M.YYYY.
     try:
-        parsed = pd.to_datetime(date_part, dayfirst=True, errors="raise")
+        parsed = pd.to_datetime(date_part, format="%d.%m.%Y", errors="raise")
+        return parsed.strftime("%d-%m-%Y")
+    except (ValueError, TypeError):
+        pass
+
+    # Last-resort parser for unusual non-numeric values.
+    try:
+        parsed = pd.to_datetime(date_part, errors="raise")
         return parsed.strftime("%d-%m-%Y")
     except (ValueError, TypeError):
         return text
