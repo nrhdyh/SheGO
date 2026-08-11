@@ -213,51 +213,128 @@ st.markdown(
         font-size:.84rem;
     }
 
-    /* ---------- FORCE WHITE STREAMLIT INPUTS ---------- */
+    /* ---------- FORCE ALL STREAMLIT FILTERS TO LIGHT THEME ---------- */
     label,
     [data-testid="stWidgetLabel"] p,
     [data-testid="stWidgetLabel"] span {
-        color:#313131 !important;
+        color:#262626 !important;
     }
 
-    div[data-baseweb="input"] > div,
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="base-input"],
-    .stTextInput input {
-        background:#fff !important;
+    /* Text input */
+    [data-testid="stTextInput"] div[data-baseweb="input"],
+    [data-testid="stTextInput"] div[data-baseweb="input"] > div,
+    [data-testid="stTextInput"] input,
+    div[data-baseweb="base-input"] {
+        background-color:#ffffff !important;
         color:#171717 !important;
-        border-color:#dedede !important;
+        border-color:#dcdcdc !important;
     }
 
-    .stTextInput input {
+    [data-testid="stTextInput"] input {
+        -webkit-text-fill-color:#171717 !important;
+        caret-color:#e85c8a !important;
+    }
+
+    [data-testid="stTextInput"] input::placeholder {
+        color:#999999 !important;
+        -webkit-text-fill-color:#999999 !important;
+        opacity:1 !important;
+    }
+
+    /* Selectbox + Multiselect outer shell */
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+    [data-testid="stMultiSelect"] div[data-baseweb="select"] > div,
+    .stSelectbox div[data-baseweb="select"] > div,
+    .stMultiSelect div[data-baseweb="select"] > div,
+    div[data-baseweb="select"] > div {
+        background-color:#ffffff !important;
+        color:#171717 !important;
+        border-color:#dcdcdc !important;
+        box-shadow:none !important;
+    }
+
+    /* Text inside select/multiselect */
+    [data-testid="stSelectbox"] div[data-baseweb="select"] span,
+    [data-testid="stSelectbox"] div[data-baseweb="select"] div,
+    [data-testid="stSelectbox"] div[data-baseweb="select"] input,
+    [data-testid="stMultiSelect"] div[data-baseweb="select"] span,
+    [data-testid="stMultiSelect"] div[data-baseweb="select"] input {
+        color:#171717 !important;
         -webkit-text-fill-color:#171717 !important;
     }
 
-    .stTextInput input::placeholder {
-        color:#999 !important;
-        -webkit-text-fill-color:#999 !important;
+    /* Arrow / clear icons */
+    [data-testid="stSelectbox"] svg,
+    [data-testid="stMultiSelect"] svg,
+    div[data-baseweb="select"] svg {
+        fill:#666666 !important;
+        color:#666666 !important;
     }
 
-    div[data-baseweb="select"] span,
-    div[data-baseweb="select"] input {
-        color:#171717 !important;
-        -webkit-text-fill-color:#171717 !important;
+    /* Selected multiselect chips */
+    [data-baseweb="tag"] {
+        background-color:#fde8ef !important;
+        border:1px solid #f5cad8 !important;
+        color:#b93e68 !important;
     }
 
+    [data-baseweb="tag"] span,
+    [data-baseweb="tag"] div {
+        color:#b93e68 !important;
+        -webkit-text-fill-color:#b93e68 !important;
+    }
+
+    [data-baseweb="tag"] svg {
+        fill:#b93e68 !important;
+        color:#b93e68 !important;
+    }
+
+    /* Dropdown menu/popover */
     div[data-baseweb="popover"],
     div[data-baseweb="menu"],
-    ul[role="listbox"] {
-        background:#fff !important;
+    ul[role="listbox"],
+    [data-baseweb="popover"] > div {
+        background-color:#ffffff !important;
         color:#171717 !important;
+        border-color:#e5e5e5 !important;
     }
 
-    li[role="option"] {
-        background:#fff !important;
+    li[role="option"],
+    div[role="option"] {
+        background-color:#ffffff !important;
         color:#171717 !important;
+        -webkit-text-fill-color:#171717 !important;
     }
 
-    li[role="option"]:hover {
+    li[role="option"]:hover,
+    div[role="option"]:hover,
+    li[role="option"][aria-selected="true"],
+    div[role="option"][aria-selected="true"] {
+        background-color:#fff3f7 !important;
+        color:#b93e68 !important;
+    }
+
+    /* Ensure filter widgets don't inherit dark system theme */
+    [data-testid="stSelectbox"],
+    [data-testid="stMultiSelect"],
+    [data-testid="stTextInput"] {
+        color-scheme:light !important;
+    }
+
+    /* Sort radio */
+    [data-testid="stRadio"] label {
+        background:#ffffff !important;
+        color:#303030 !important;
+        border:1px solid #e3e3e3 !important;
+        border-radius:999px !important;
+        padding:7px 10px !important;
+        margin-right:5px !important;
+    }
+
+    [data-testid="stRadio"] label:has(input:checked) {
         background:#fff3f7 !important;
+        border-color:#efb9cb !important;
+        color:#b93e68 !important;
     }
 
     /* ---------- FILTER BOX ---------- */
@@ -1026,13 +1103,14 @@ with st.container(border=True):
             fare_min_filter = float(selected_range[0])
             fare_max_filter = float(selected_range[1])
 
-    sort_option = st.selectbox(
+    sort_option = st.radio(
         "Susun Job",
         options=[
             "Asal dari Google Sheet",
             "Tambang tertinggi",
             "Tambang terendah",
         ],
+        horizontal=True,
     )
 
     if st.button(
